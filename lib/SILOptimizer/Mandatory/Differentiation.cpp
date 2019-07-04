@@ -3234,7 +3234,6 @@ public:
     // on the remapped original function operand and `autodiff_function_extract`
     // the VJP. The actual JVP/VJP functions will be populated in the
     // `autodiff_function` during the transform main loop.
-    SILValue differentiableFunc;
     if (!vjpValue) {
       // FIXME: Handle indirect differentiation invokers. This may require some
       // redesign: currently, each original function + attribute pair is mapped
@@ -3252,10 +3251,7 @@ public:
       // In the VJP, specialization is also necessary for parity. The original
       // function operand is specialized with a remapped version of same
       // substitution map using an argument-less `partial_apply`.
-
-      if (ai->getSubstitutionMap().empty()) {
-        builder.createRetainValue(loc, original, builder.getDefaultAtomicity());
-      } else {
+      if (!ai->getSubstitutionMap().empty()) {
         auto substMap = getOpSubstitutionMap(ai->getSubstitutionMap());
         auto vjpPartialApply = getBuilder().createPartialApply(
             ai->getLoc(), original, substMap, {},
@@ -3266,7 +3262,6 @@ public:
       auto *autoDiffFuncInst = context.createAutoDiffFunction(
           getBuilder(), loc, indices.parameters, /*differentiationOrder*/ 1,
           original);
-      differentiableFunc = autoDiffFuncInst;
 
       // Record the `autodiff_function` instruction.
       context.getAutoDiffFunctionInsts().push_back(autoDiffFuncInst);
@@ -3300,10 +3295,6 @@ public:
     auto *vjpCall = getBuilder().createApply(loc, vjpValue, SubstitutionMap(),
                                              vjpArgs, ai->isNonThrowing());
     LLVM_DEBUG(getADDebugStream() << "Applied vjp function\n" << *vjpCall);
-
-    // Release the differentiable function.
-    if (differentiableFunc)
-      builder.createReleaseValue(loc, differentiableFunc, builder.getDefaultAtomicity());
 
     // Get the VJP results (original results and pullback).
     SmallVector<SILValue, 8> vjpDirectResults;
@@ -6374,6 +6365,7 @@ SILValue ADContext::promoteToDifferentiableFunction(
           loc, assocFn, SILType::getPrimitiveObjectType(expectedAssocFnTy));
     }
 
+    builder.createRetainValue(loc, assocFn, builder.getDefaultAtomicity());
     assocFns.push_back(assocFn);
   }
 
@@ -6392,8 +6384,6 @@ SILValue ADContext::promoteToDifferentiableFunction(
 ///
 /// Folding can be disabled by the `SkipFoldingAutoDiffFunctionExtraction` flag
 /// for SIL testing purposes.
-// FIXME: This function is not correctly detecting the foldable pattern and
-// needs to be rewritten.
 void ADContext::foldAutoDiffFunctionExtraction(AutoDiffFunctionInst *source) {
   // Iterate through all `autodiff_function` instruction uses.
   for (auto use : source->getUses()) {
@@ -6416,8 +6406,12 @@ void ADContext::foldAutoDiffFunctionExtraction(AutoDiffFunctionInst *source) {
     adfei->eraseFromParent();
   }
   // If the `autodiff_function` instruction has no remaining uses, erase it.
-  if (isInstructionTriviallyDead(source))
+  if (isInstructionTriviallyDead(source)) {
+    SILBuilder builder(source);
+    for (auto &assocFn : source->getAssociatedFunctions())
+      emitCleanup(builder, source->getLoc(), assocFn.get());
     source->eraseFromParent();
+  }
   // Mark `source` as processed so that it won't be reprocessed after deletion.
   processedAutoDiffFunctionInsts.insert(source);
 }
