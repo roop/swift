@@ -896,6 +896,10 @@ static Type getInitializationTypeInContext(
     if (auto originalProperty = singleVar->getOriginalWrappedProperty()) {
       if (originalProperty->isPropertyWrapperInitializedWithInitialValue())
         interfaceType = originalProperty->getValueInterfaceType();
+        if (originalProperty->
+            isInnermostPropertyWrapperInitUsesEscapingAutoClosure()) {
+          interfaceType = FunctionType::get({}, interfaceType);
+        }
     }
   }
 

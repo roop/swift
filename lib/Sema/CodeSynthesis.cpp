@@ -214,6 +214,7 @@ static ConstructorDecl *createImplicitConstructor(NominalTypeDecl *decl,
       accessLevel = std::min(accessLevel, var->getFormalAccess());
 
       auto varInterfaceType = var->getValueInterfaceType();
+      bool isAutoClosureOfPropertyWrappedValue = false;
 
       if (var->getAttrs().hasAttribute<LazyAttr>()) {
         // If var is a lazy property, its value is provided for the underlying
@@ -229,7 +230,12 @@ static ConstructorDecl *createImplicitConstructor(NominalTypeDecl *decl,
         // accept a value of the original property type. Otherwise, the
         // memberwise initializer will be in terms of the backing storage
         // type.
-        if (!var->isPropertyMemberwiseInitializedWithWrappedType()) {
+        if (var->isPropertyMemberwiseInitializedWithWrappedType()) {
+          if (var->isInnermostPropertyWrapperInitUsesEscapingAutoClosure()) {
+            varInterfaceType = FunctionType::get({}, varInterfaceType);
+            isAutoClosureOfPropertyWrappedValue = true;
+          }
+        } else {
           varInterfaceType = backingPropertyType;
         }
       }
@@ -240,7 +246,8 @@ static ConstructorDecl *createImplicitConstructor(NominalTypeDecl *decl,
                     var->getName(), Loc, var->getName(), decl);
       arg->setInterfaceType(varInterfaceType);
       arg->setImplicit();
-      
+      arg->setAutoClosure(isAutoClosureOfPropertyWrappedValue);
+
       maybeAddMemberwiseDefaultArg(arg, var, defaultInits, params.size(), ctx);
       
       params.push_back(arg);

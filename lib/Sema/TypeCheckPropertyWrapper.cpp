@@ -657,6 +657,18 @@ Type swift::computeWrappedValueType(VarDecl *var, Type backingStorageType,
   return wrappedValueType;
 }
 
+static bool isOpaquePlaceholderClosure(const Expr *value) {
+  auto ove = dyn_cast<OpaqueValueExpr>(value);
+  if (!ove || !ove->isPlaceholder())
+    return false;
+
+  if (auto valueFnTy = ove->getType()->getAs<FunctionType>()) {
+    return (valueFnTy->getNumParams() == 0);
+  }
+
+  return false;
+}
+
 Expr *swift::buildPropertyWrapperInitialValueCall(
     VarDecl *var, Type backingStorageType, Expr *value,
     bool ignoreAttributeArgs) {
@@ -664,6 +676,13 @@ Expr *swift::buildPropertyWrapperInitialValueCall(
   ASTContext &ctx = var->getASTContext();
   auto wrapperAttrs = var->getAttachedPropertyWrappers();
   Expr *initializer = value;
+  if (var->isInnermostPropertyWrapperInitUsesEscapingAutoClosure() &&
+      isOpaquePlaceholderClosure(value)) {
+    // We can't pass the opaque closure directly as an autoclosure arg.
+    // So we instead pass a CallExpr calling the opaque closure, which
+    // the type checker shall wrap in an AutoClosureExpr.
+    initializer = CallExpr::createImplicit(ctx, value, {}, {});
+  }
   for (unsigned i : reversed(indices(wrapperAttrs))) {
     Type wrapperType =
       backingStorageType ? computeWrappedValueType(var, backingStorageType, i)
