@@ -5625,6 +5625,53 @@ bool VarDecl::isPropertyMemberwiseInitializedWithWrappedType() const {
       this, /*checkDefaultInit=*/false);
 }
 
+static bool isInitFirstParamEscapingClosure(const ConstructorDecl *init) {
+  Type initTy = init->getInterfaceType();
+  if (!initTy || !initTy->is<AnyFunctionType>())
+    return false;
+
+  Type resultTy = initTy->castTo<AnyFunctionType>()->getResult();
+  if (!resultTy || !resultTy->is<FunctionType>())
+    return false;
+
+  auto funcTy = resultTy->castTo<FunctionType>();
+  if (!funcTy || funcTy->getNumParams() == 0)
+    return false;
+
+  Type firstParamTy = funcTy->getParams()[0].getPlainType();
+  if (!firstParamTy->is<FunctionType>())
+    return false;
+
+  return (!firstParamTy->castTo<FunctionType>()->isNoEscape());
+}
+
+bool VarDecl::isInnermostPropertyWrapperInitUsesEscapingAutoClosure() const {
+  auto customAttrs = getAttachedPropertyWrappers();
+  if (customAttrs.empty())
+    return false;
+
+  unsigned innermostWrapperIndex = customAttrs.size() - 1;
+  auto wrappedValueInit = getAttachedPropertyWrapperTypeInfo(
+      innermostWrapperIndex).wrappedValueInit;
+  if (!wrappedValueInit)
+    return false;
+
+  auto wrappedValueInitParams = wrappedValueInit->getParameters();
+  if (wrappedValueInitParams->size() == 0)
+    return false;
+
+  auto firstParam = wrappedValueInitParams->get(0);
+  auto firstParamName = firstParam->getName();
+
+  ASTContext &ctx = getASTContext();
+  if (firstParamName != ctx.Id_wrappedValue &&
+       firstParamName != ctx.Id_initialValue)
+     return false;
+
+  return (firstParam->isAutoClosure() &&
+          isInitFirstParamEscapingClosure(wrappedValueInit));
+}
+
 Identifier VarDecl::getObjCPropertyName() const {
   if (auto attr = getAttrs().getAttribute<ObjCAttr>()) {
     if (auto name = attr->getName())
@@ -5960,8 +6007,11 @@ Expr *swift::findOriginalPropertyWrapperInitialValue(VarDecl *var,
   if (initArg) {
     initArg = initArg->getSemanticsProvidingExpr();
     if (auto autoclosure = dyn_cast<AutoClosureExpr>(initArg)) {
-      initArg =
-          autoclosure->getSingleExpressionBody()->getSemanticsProvidingExpr();
+      if (!var->isInnermostPropertyWrapperInitUsesEscapingAutoClosure()) {
+        // Remove the autoclosure part only for non-escaping autoclosures
+        initArg =
+            autoclosure->getSingleExpressionBody()->getSemanticsProvidingExpr();
+      }
     }
   }
   return initArg;

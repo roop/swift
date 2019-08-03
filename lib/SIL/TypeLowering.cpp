@@ -1776,21 +1776,24 @@ static CanAnyFunctionType getStoredPropertyInitializerInterfaceType(
                                                      TypeConverter &TC,
                                                      VarDecl *VD) {
   auto *DC = VD->getDeclContext();
-  CanType resultTy =
-    VD->getParentPattern()->getType()->mapTypeOutOfContext()
-          ->getCanonicalType();
+  Type resultTy = VD->getParentPattern()->getType()->mapTypeOutOfContext();
 
   // If this is the backing storage for a property with an attached
   // wrapper that was initialized with '=', the stored property initializer
   // will be in terms of the original property's type.
   if (auto originalProperty = VD->getOriginalWrappedProperty()) {
-    if (originalProperty->isPropertyWrapperInitializedWithInitialValue())
-      resultTy = originalProperty->getValueInterfaceType()->getCanonicalType();
+    if (originalProperty->isPropertyWrapperInitializedWithInitialValue()) {
+      resultTy = originalProperty->getValueInterfaceType();
+      if (originalProperty
+          ->isInnermostPropertyWrapperInitUsesEscapingAutoClosure()) {
+        resultTy = FunctionType::get({}, resultTy);
+      }
+    }
   }
 
   auto sig = TC.getEffectiveGenericSignature(DC);
 
-  return CanAnyFunctionType::get(sig, {}, resultTy);
+  return CanAnyFunctionType::get(sig, {}, resultTy->getCanonicalType());
 }
 
 /// Get the type of a destructor function.

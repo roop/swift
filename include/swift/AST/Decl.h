@@ -5103,6 +5103,10 @@ public:
   /// uses the wrapped type.
   bool isPropertyMemberwiseInitializedWithWrappedType() const;
 
+  /// Whether the innermost property wrapper's initializer's 'wrappedValue' parameter
+  /// is marked with '@autoclosure' and '@escaping'.
+  bool isInnermostPropertyWrapperInitUsesEscapingAutoClosure() const;
+
   /// If this property is the backing storage for a property with an attached
   /// property wrapper, return the original property.
   ///

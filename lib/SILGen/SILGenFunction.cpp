@@ -696,6 +696,11 @@ void SILGenFunction::emitGeneratorFunction(SILDeclRef function, VarDecl *var) {
     if (originalProperty->isPropertyWrapperInitializedWithInitialValue()) {
       interfaceType = originalProperty->getValueInterfaceType();
       varType = originalProperty->getType();
+      if (originalProperty->
+          isInnermostPropertyWrapperInitUsesEscapingAutoClosure()) {
+        interfaceType = FunctionType::get({}, interfaceType);
+        varType = FunctionType::get({}, varType);
+      }
     }
   }
 
