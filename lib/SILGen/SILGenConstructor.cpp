@@ -895,7 +895,7 @@ static Type getInitializationTypeInContext(
   if (auto singleVar = pattern->getSingleVar()) {
     if (auto originalProperty = singleVar->getOriginalWrappedProperty()) {
       if (originalProperty->isPropertyWrapperInitializedWithInitialValue())
-        interfaceType = originalProperty->getValueInterfaceType();
+        interfaceType = originalProperty->getPropertyWrapperInitValueInterfaceType();
     }
   }
 

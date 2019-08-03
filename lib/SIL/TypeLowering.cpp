@@ -1796,8 +1796,10 @@ static CanAnyFunctionType getStoredPropertyInitializerInterfaceType(
   // wrapper that was initialized with '=', the stored property initializer
   // will be in terms of the original property's type.
   if (auto originalProperty = VD->getOriginalWrappedProperty()) {
-    if (originalProperty->isPropertyWrapperInitializedWithInitialValue())
-      resultTy = originalProperty->getValueInterfaceType()->getCanonicalType();
+    if (originalProperty->isPropertyWrapperInitializedWithInitialValue()) {
+      resultTy = originalProperty->getPropertyWrapperInitValueInterfaceType()
+                                     ->getCanonicalType();
+    }
   }
 
   auto sig = DC->getGenericSignatureOfContext();

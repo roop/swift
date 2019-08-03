@@ -5101,6 +5101,18 @@ public:
   /// uses the wrapped type.
   bool isPropertyMemberwiseInitializedWithWrappedType() const;
 
+  /// Whether the innermost property wrapper's initializer's 'wrappedValue' parameter
+  /// is marked with '@autoclosure' and '@escaping'.
+  bool isInnermostPropertyWrapperInitUsesEscapingAutoClosure() const;
+
+  /// Return the interface type of the value used for the 'wrappedValue:'
+  /// parameter when initializing a property wrapper.
+  ///
+  /// If the property has an attached property wrapper and it's an autoclosure,
+  /// return a function type returning the stored value. Otherwise, return the
+  /// interface type of the stored value.
+  Type getPropertyWrapperInitValueInterfaceType() const;
+
   /// If this property is the backing storage for a property with an attached
   /// property wrapper, return the original property.
   ///

@@ -751,8 +751,8 @@ void SILGenFunction::emitGeneratorFunction(SILDeclRef function, VarDecl *var) {
   // will be in terms of the original property's type.
   if (auto originalProperty = var->getOriginalWrappedProperty()) {
     if (originalProperty->isPropertyWrapperInitializedWithInitialValue()) {
-      interfaceType = originalProperty->getValueInterfaceType();
-      varType = originalProperty->getType();
+      interfaceType = originalProperty->getPropertyWrapperInitValueInterfaceType();
+      varType = originalProperty->getDeclContext()->mapTypeIntoContext(interfaceType);
     }
   }
 
