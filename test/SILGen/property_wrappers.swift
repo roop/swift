@@ -242,6 +242,123 @@ func triggerUseLazy() {
   _ = UseLazy<Int>(wibble: [1, 2, 3])
 }
 
+func computeInt() -> Int {
+  return 42
+}
+
+struct LazyWithoutDefault {
+  @Lazy var foo: Int
+
+  // Memberwise init should take a closure arg and pass it to init(wrappedValue:)
+
+  // LazyWithoutDefault.init(foo:)
+  // CHECK-LABEL: sil hidden [ossa] @$s17property_wrappers18LazyWithoutDefaultV3fooACSiyXA_tcfC : $@convention(method) (@owned @callee_guaranteed () -> Int, @thin LazyWithoutDefault.Type) -> @owned LazyWithoutDefault
+
+  // CHECK:       // function_ref Lazy.init(wrappedValue:)
+  // CHECK-NEXT:  function_ref @$s17property_wrappers4LazyO12wrappedValueACyxGxyXA_tcfC : $@convention(method) <τ_0_0> (@owned @callee_guaranteed () -> @out τ_0_0, @thin Lazy<τ_0_0>.Type) -> @out Lazy<τ_0_0>
+}
+
+func useLazyWithoutDefault() {
+  _ = LazyWithoutDefault(foo: computeInt())
+
+  // The initialization call should create an implicit closure and call the memberwise init
+
+  // useLazyWithoutDefault()
+  // CHECK-LABEL: sil hidden [ossa] @$s17property_wrappers21useLazyWithoutDefaultyyF : $@convention(thin) () -> ()
+
+  // computeInt() must not get called here
+  // CHECK-NOT:   // function_ref computeInt()
+  // CHECK-NOT:   function_ref @$s17property_wrappers10computeIntSiyF : $@convention(thin) () -> Int
+  // CHECK-NOT:   apply
+
+  // CHECK:       // function_ref implicit closure #1 in useLazyWithoutDefault()
+  // CHECK-NEXT:  function_ref @$s17property_wrappers21useLazyWithoutDefaultyyFSiycfu_ : $@convention(thin) () -> Int
+  // CHECK:       // function_ref LazyWithoutDefault.init(foo:)
+  // CHECK-NEXT:  function_ref @$s17property_wrappers18LazyWithoutDefaultV3fooACSiyXA_tcfC : $@convention(method) (@owned @callee_guaranteed () -> Int, @thin LazyWithoutDefault.Type) -> @owned LazyWithoutDefault
+  // CHECK:       apply
+
+  // The implicit closure must call computeInt()
+  // implicit closure #1 in useLazyWithoutDefault()
+  // CHECK-LABEL: sil private [transparent] [ossa] @$s17property_wrappers21useLazyWithoutDefaultyyFSiycfu_ : $@convention(thin) () -> Int
+  // CHECK:       // function_ref computeInt()
+  // CHECK-NEXT:  function_ref @$s17property_wrappers10computeIntSiyF : $@convention(thin) () -> Int
+  // CHECK:       apply
+}
+
+struct LazyWithDefault {
+  @Lazy var bar = computeInt()
+
+  // variable initialization expression of LazyWithDefault._bar
+  // CHECK-LABEL: sil hidden [transparent] [ossa] @$s17property_wrappers15LazyWithDefaultV4_bar33_{{.*}}AA0C0OySiGvpfi : $@convention(thin) () -> @owned @callee_guaranteed () -> Int
+  // CHECK:       // function_ref implicit closure #1 in variable initialization expression of LazyWithDefault._bar
+  // CHECK-NEXT:  function_ref @$s17property_wrappers15LazyWithDefaultV4_bar33_{{.*}}AA0C0OySiGvpfiSiycfu_ : $@convention(thin) () -> Int // user: %1
+
+  // implicit closure #1 in variable initialization expression of LazyWithDefault._bar
+  // CHECK-LABEL: sil private [transparent] [ossa] @$s17property_wrappers15LazyWithDefaultV4_bar33_{{.*}}AA0C0OySiGvpfiSiycfu_ : $@convention(thin) () -> Int
+  // CHECK:       // function_ref computeInt()
+  // CHECK-NEXT:  function_ref @$s17property_wrappers10computeIntSiyF : $@convention(thin) () -> Int
+  // CHECK:       apply
+
+  // Memberwise init should take a closure arg and pass it to init(wrappedValue:)
+
+  // LazyWithDefault.init(bar:)
+  // CHECK-LABEL: sil hidden [ossa] @$s17property_wrappers15LazyWithDefaultV3barACSiyXA_tcfC : $@convention(method) (@owned @callee_guaranteed () -> Int, @thin LazyWithDefault.Type) -> @owned LazyWithDefault
+
+  // CHECK:       // function_ref Lazy.init(wrappedValue:)
+  // CHECK-NEXT:  function_ref @$s17property_wrappers4LazyO12wrappedValueACyxGxyXA_tcfC : $@convention(method) <τ_0_0> (@owned @callee_guaranteed () -> @out τ_0_0, @thin Lazy<τ_0_0>.Type) -> @out Lazy<τ_0_0>
+
+  // Default init should create a closure and pass it to init(wrappedValue:)
+
+  // LazyWithDefault.init()
+  // CHECK-LABEL: sil hidden [ossa] @$s17property_wrappers15LazyWithDefaultVACycfC : $@convention(method) (@thin LazyWithDefault.Type) -> @owned LazyWithDefault
+
+  // CHECK:       // function_ref variable initialization expression of LazyWithDefault._bar
+  // CHECK-NEXT:  function_ref @$s17property_wrappers15LazyWithDefaultV4_bar33_{{.*}}AA0C0OySiGvpfi : $@convention(thin) () -> @owned @callee_guaranteed () -> Int
+  // CHECK:       apply
+  // CHECK:       // function_ref Lazy.init(wrappedValue:)
+  // CHECK-NEXT:  function_ref @$s17property_wrappers4LazyO12wrappedValueACyxGxyXA_tcfC : $@convention(method) <τ_0_0> (@owned @callee_guaranteed () -> @out τ_0_0, @thin Lazy<τ_0_0>.Type) -> @out Lazy<τ_0_0>
+}
+
+func useLazyWithDefault1() {
+  _ = LazyWithDefault(bar: computeInt())
+
+  // The initialization call should create an implicit closure and call the memberwise init
+
+  // useLazyWithDefault1()
+  // CHECK-LABEL: sil hidden [ossa] @$s17property_wrappers19useLazyWithDefault1yyF : $@convention(thin) () -> ()
+
+  // computeInt() must not get called here
+  // CHECK-NOT:   // function_ref computeInt()
+  // CHECK-NOT:   function_ref @$s17property_wrappers10computeIntSiyF : $@convention(thin) () -> Int
+  // CHECK-NOT:   apply
+
+  // CHECK:       // function_ref implicit closure #1 in useLazyWithDefault1()
+  // CHECK-NEXT:  function_ref @$s17property_wrappers19useLazyWithDefault1yyFSiycfu_ : $@convention(thin) () -> Int
+  // CHECK:       // function_ref LazyWithDefault.init(bar:)
+  // CHECK-NEXT:  function_ref @$s17property_wrappers15LazyWithDefaultV3barACSiyXA_tcfC : $@convention(method) (@owned @callee_guaranteed () -> Int, @thin LazyWithDefault.Type) -> @owned LazyWithDefault
+  // CHECK:       apply
+
+  // The implicit closure must call computeInt()
+  // implicit closure #1 in useLazyWithDefault1()
+  // CHECK-LABEL: sil private [transparent] [ossa] @$s17property_wrappers19useLazyWithDefault1yyFSiycfu_ : $@convention(thin) () -> Int
+  // CHECK:       // function_ref computeInt()
+  // CHECK-NEXT:  function_ref @$s17property_wrappers10computeIntSiyF : $@convention(thin) () -> Int
+  // CHECK:       apply
+}
+
+func useLazyWithDefault2() {
+  _ = LazyWithDefault()
+
+  // The initialization call should just call the default init
+
+  // useLazyWithDefault2()
+  // CHECK-LABEL: sil hidden [ossa] @$s17property_wrappers19useLazyWithDefault2yyF : $@convention(thin) () -> ()
+
+  // CHECK:       // function_ref LazyWithDefault.init()
+  // CHECK-NEXT:  function_ref @$s17property_wrappers15LazyWithDefaultVACycfC : $@convention(method) (@thin LazyWithDefault.Type) -> @owned LazyWithDefault
+  // CHECK:       apply
+}
+
 struct UseStatic {
   // CHECK: sil hidden [ossa] @$s17property_wrappers9UseStaticV12staticWibbleSaySiGvgZ
   // CHECK: sil private [global_init] [ossa] @$s17property_wrappers9UseStaticV13_staticWibble33_{{.*}}4LazyOySaySiGGvau
