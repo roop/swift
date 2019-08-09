@@ -5627,15 +5627,15 @@ bool VarDecl::isPropertyMemberwiseInitializedWithWrappedType() const {
 
 static bool isInitFirstParamEscapingClosure(const ConstructorDecl *init) {
   Type initTy = init->getInterfaceType();
-  if (!initTy || !initTy->is<AnyFunctionType>())
+  if (!initTy->is<AnyFunctionType>())
     return false;
 
   Type resultTy = initTy->castTo<AnyFunctionType>()->getResult();
-  if (!resultTy || !resultTy->is<FunctionType>())
+  if (!resultTy->is<FunctionType>())
     return false;
 
   auto funcTy = resultTy->castTo<FunctionType>();
-  if (!funcTy || funcTy->getNumParams() == 0)
+  if (funcTy->getNumParams() == 0)
     return false;
 
   Type firstParamTy = funcTy->getParams()[0].getPlainType();
