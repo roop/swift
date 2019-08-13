@@ -359,6 +359,23 @@ func useLazyWithDefault2() {
   // CHECK:       apply
 }
 
+@propertyWrapper
+struct NonEscaping<V> {
+  var wrappedValue: V
+  init(wrappedValue: @autoclosure () -> V) {
+    self.wrappedValue = wrappedValue()
+  }
+}
+
+struct NonEscapingWithoutDefault {
+  @NonEscaping var foo: Int
+
+  // Memberwise init should take an Int arg, not a closure
+
+  // NonEscapingWithoutDefault.init(foo:)
+  // CHECK-LABEL: sil hidden [ossa] @$s17property_wrappers25NonEscapingWithoutDefaultV3fooACSi_tcfC : $@convention(method) (Int, @thin NonEscapingWithoutDefault.Type) -> NonEscapingWithoutDefault
+}
+
 struct UseStatic {
   // CHECK: sil hidden [ossa] @$s17property_wrappers9UseStaticV12staticWibbleSaySiGvgZ
   // CHECK: sil private [global_init] [ossa] @$s17property_wrappers9UseStaticV13_staticWibble33_{{.*}}4LazyOySaySiGGvau
