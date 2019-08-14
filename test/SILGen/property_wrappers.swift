@@ -468,6 +468,25 @@ func testComposition() {
   _ = CompositionMembers(p1: nil)
 }
 
+@propertyWrapper
+struct WrapperWithDummyAutoclosure<V> {
+  var wrappedValue: V
+  init(wrappedValue: @autoclosure @escaping () -> V) {
+    self.wrappedValue = wrappedValue()
+  }
+}
+
+struct CompositionWithAutoclosure {
+  @WrapperA @WrapperB @WrapperWithDummyAutoclosure var p1: Int
+  @WrapperA @WrapperWithDummyAutoclosure @WrapperB var p2: Int
+  @WrapperWithDummyAutoclosure @WrapperA @WrapperB var p3: Int
+
+  // In the memberwise init, only p1 should be a closure - p2 and p3 should be just Int
+
+  // CompositionWithAutoclosure.init(p1:p2:p3:)
+  // CHECK-LABEL: sil hidden [ossa] @$s17property_wrappers26CompositionWithAutoclosureV2p12p22p3ACSiyXA_S2itcfC : $@convention(method) (@owned @callee_guaranteed () -> Int, Int, Int, @thin CompositionWithAutoclosure.Type) -> CompositionWithAutoclosure
+}
+
 // Observers with non-default mutatingness.
 @propertyWrapper
 struct NonMutatingSet<T> {
