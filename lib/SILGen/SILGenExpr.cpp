@@ -2370,12 +2370,7 @@ static OpaqueValueExpr *opaqueValueExprToSubstituteForAutoClosure(
         if (!ace->isImplicit() || !ove->isImplicit() || !ove->isPlaceholder())
           return nullptr;
 
-        Type aceType = ace->getType();
-        Type oveType = ove->getType();
-        if (!aceType || !oveType)
-          return nullptr;
-
-        if (aceType->getCanonicalType() == oveType->getCanonicalType())
+        if (ace->getType()->isEqual(ove->getType()))
           return ove;
       }
     }
