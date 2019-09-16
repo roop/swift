@@ -630,7 +630,7 @@ Type swift::computeWrappedValueType(VarDecl *var, Type backingStorageType,
   return wrappedValueType;
 }
 
-static bool isOpaquePlaceholderClosure(const Expr *value, Type &resultType) {
+static bool isOpaquePlaceholderClosure(const Expr *value) {
   auto ove = dyn_cast<OpaqueValueExpr>(value);
   if (!ove || !ove->isPlaceholder())
     return false;
@@ -640,10 +640,8 @@ static bool isOpaquePlaceholderClosure(const Expr *value, Type &resultType) {
     return false;
 
   if (auto valueFnTy = valueTy->castTo<FunctionType>()) {
-    if (valueFnTy->getNumParams() == 0) {
-      resultType = valueFnTy->getResult();
+    if (valueFnTy->getNumParams() == 0)
       return true;
-    }
   }
 
   return false;
@@ -656,9 +654,8 @@ Expr *swift::buildPropertyWrapperInitialValueCall(
   ASTContext &ctx = var->getASTContext();
   auto wrapperAttrs = var->getAttachedPropertyWrappers();
   Expr *initializer = value;
-  Type resultTy = Type();
   if (var->isInnermostPropertyWrapperInitUsesEscapingAutoClosure() &&
-      isOpaquePlaceholderClosure(value, resultTy)) {
+      isOpaquePlaceholderClosure(value)) {
     // We can't pass the opaque closure directly as an autoclosure arg.
     // So we create a CallExpr calling the opaque closure, which shall
     // eventually become part of an AutoClosureExpr, which can then
@@ -678,25 +675,16 @@ Expr *swift::buildPropertyWrapperInitialValueCall(
 
     SourceLoc startLoc = wrapperAttrs[i]->getTypeLoc().getSourceRange().Start;
 
-    auto init = var->getAttachedPropertyWrapperTypeInfo(i).wrappedValueInit;
-    if (init && resultTy) {
-      auto paramsList = init->getParameters();
-      if (paramsList->size() > 0 && paramsList->get(0)->isAutoClosure()) {
-        auto fnTy = FunctionType::get({}, resultTy);
-        initializer = new (ctx) AutoClosureExpr(initializer, fnTy,
-          AutoClosureExpr::InvalidDiscriminator, var->getDeclContext());
-      }
-    }
-    resultTy = wrapperType;
-
     // If there were no arguments provided for the attribute at this level,
     // call `init(wrappedValue:)` directly.
     auto attr = wrapperAttrs[i];
     if (!attr->getArg() || ignoreAttributeArgs) {
       Identifier argName = ctx.Id_wrappedValue;
-      if (init)
+      if (auto init
+              = var->getAttachedPropertyWrapperTypeInfo(i).wrappedValueInit) {
         argName = init->getFullName().getArgumentNames()[0];
-
+      }
+      
       auto endLoc = initializer->getEndLoc();
       if (endLoc.isInvalid() && startLoc.isValid())
         endLoc = wrapperAttrs[i]->getTypeLoc().getSourceRange().End;
