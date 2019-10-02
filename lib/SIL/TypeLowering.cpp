@@ -1818,8 +1818,7 @@ static CanAnyFunctionType getPropertyWrapperBackingInitializerInterfaceType(
 
   auto *DC = VD->getInnermostDeclContext();
   CanType inputType =
-    VD->getParentPattern()->getType()->mapTypeOutOfContext()
-          ->getCanonicalType();
+    VD->getPropertyWrapperInitValueInterfaceType()->getCanonicalType();
 
   auto sig = DC->getGenericSignatureOfContext();
 

@@ -698,7 +698,11 @@ void SILGenFunction::emitGeneratorFunction(SILDeclRef function, Expr *value,
                                      SourceLoc(),
                                      ctx.getIdentifier("$input_value"),
                                      dc);
-    param->setInterfaceType(function.getDecl()->getInterfaceType());
+    if (auto vd = dyn_cast<VarDecl>(function.getDecl())) {
+      param->setInterfaceType(vd->getPropertyWrapperInitValueInterfaceType());
+    } else {
+      param->setInterfaceType(function.getDecl()->getInterfaceType());
+    }
 
     params = ParameterList::create(ctx, SourceLoc(), {param}, SourceLoc());
   }
