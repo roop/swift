@@ -1450,11 +1450,24 @@ namespace {
 
         // Create the assign_by_wrapper with the allocator and setter.
         assert(value.isRValue());
-        ManagedValue Mval = std::move(value).asKnownRValue(SGF).
-                              getAsSingleValue(SGF, loc);
-        SGF.B.createAssignByWrapper(loc, Mval.forward(SGF), proj.forward(SGF),
-                                     initFn.getValue(), setterFn.getValue(),
-                                     AssignOwnershipQualifier::Unknown);
+        if (field->isInnermostPropertyWrapperInitUsesEscapingAutoClosure()) {
+          // When the property wrapper's init takes an autoclosure, there will
+          // be a type mismatch between the initializer (which takes a closure
+          // returning the value), and the setter (which takes the value).
+          SILDeclRef constant(ce);
+          SILFunction *f = getFunction(constant, ForDefinition);
+          preEmitFunction(constant, ce, f, ce);
+          PrettyStackTraceSILFunction X("silgen closureexpr", f);
+          SILGenFunction(*this, *f, ce).emitClosure(ce);
+          postEmitFunction(constant, f);
+          return f;
+        } else {
+          ManagedValue Mval = std::move(value).asKnownRValue(SGF).
+                                getAsSingleValue(SGF, loc);
+          SGF.B.createAssignByWrapper(loc, Mval.forward(SGF), proj.forward(SGF),
+                                       initFn.getValue(), setterFn.getValue(),
+                                       AssignOwnershipQualifier::Unknown);
+        }
         return;
       }
 

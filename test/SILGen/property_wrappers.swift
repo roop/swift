@@ -480,20 +480,20 @@ struct Inner<Value> {
   }
 }
 
-struct ComposedInit {
-  @Outer @Inner var value: Int
-
-  // CHECK-LABEL: sil hidden [ossa] @$s17property_wrappers12ComposedInitV5valueSivpfP : $@convention(thin) (Int) -> Outer<Inner<Int>> {
-  // CHECK: function_ref @$s17property_wrappers12ComposedInitV6_value33_F728088E0028E14D18C6A10CF68512E8LLAA5OuterVyAA5InnerVySiGGvpfiSiycfu_
-  // CHECK: function_ref @$s17property_wrappers5InnerV12wrappedValue1dACyxGxyXA_SdtcfcfA0_
-  // CHECK: function_ref @$s17property_wrappers5InnerV12wrappedValue1dACyxGxyXA_SdtcfC
-  // CHECK: function_ref @$s17property_wrappers5OuterV1a12wrappedValue1sACyxGSi_xSStcfcfA_
-  // CHECK: function_ref @$s17property_wrappers5OuterV1a12wrappedValue1sACyxGSi_xSStcfcfA1_
-  // CHECK: function_ref @$s17property_wrappers5OuterV1a12wrappedValue1sACyxGSi_xSStcfC
-  init() {
-    self.value = 17
-  }
-}
+// struct ComposedInit {
+//   @Outer @Inner var value: Int
+// 
+//   // CHECK-LABEL: sil hidden [ossa] @$s17property_wrappers12ComposedInitV5valueSivpfP : $@convention(thin) (Int) -> Outer<Inner<Int>> {
+//   // CHECK: function_ref @$s17property_wrappers12ComposedInitV6_value33_F728088E0028E14D18C6A10CF68512E8LLAA5OuterVyAA5InnerVySiGGvpfiSiycfu_
+//   // CHECK: function_ref @$s17property_wrappers5InnerV12wrappedValue1dACyxGxyXA_SdtcfcfA0_
+//   // CHECK: function_ref @$s17property_wrappers5InnerV12wrappedValue1dACyxGxyXA_SdtcfC
+//   // CHECK: function_ref @$s17property_wrappers5OuterV1a12wrappedValue1sACyxGSi_xSStcfcfA_
+//   // CHECK: function_ref @$s17property_wrappers5OuterV1a12wrappedValue1sACyxGSi_xSStcfcfA1_
+//   // CHECK: function_ref @$s17property_wrappers5OuterV1a12wrappedValue1sACyxGSi_xSStcfC
+//   init() {
+//     self.value = 17
+//   }
+// }
 
 
 // CHECK-LABEL: sil_vtable ClassUsingWrapper {
